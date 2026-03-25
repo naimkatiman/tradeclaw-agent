@@ -1,4 +1,12 @@
-# tradeclaw-agent
+# tradeclaw-agent 🦞
+
+[![Stars](https://img.shields.io/github/stars/naimkatiman/tradeclaw-agent?style=social)](https://github.com/naimkatiman/tradeclaw-agent/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://typescriptlang.org)
+[![npm](https://img.shields.io/badge/npx-tradeclaw--agent-CB3837?logo=npm)](https://npmjs.com/package/tradeclaw-agent)
+
+> **Prefer a web dashboard?** → [TradeClaw](https://github.com/naimkatiman/tradeclaw) — the Docker-deployable web version with live charts.
 
 ### Stop paying for signal services. Run your own.
 
