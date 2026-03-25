@@ -1,10 +1,26 @@
 {
   "name": "tradeclaw-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Self-hosted AI trading signal agent. Runs on your machine. Delivers signals to Telegram, Discord, or any webhook. Free forever.",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "bin": {
     "tradeclaw-agent": "./dist/cli/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "openclaw-skill",
+    ".tradeclaw.example.json"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -13,8 +29,30 @@
     "lint": "eslint src/",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
-  "keywords": ["trading", "signals", "forex", "crypto", "telegram", "self-hosted", "ai", "open-source"],
+  "keywords": [
+    "trading",
+    "signals",
+    "forex",
+    "crypto",
+    "telegram",
+    "self-hosted",
+    "ai",
+    "open-source",
+    "gold",
+    "bitcoin",
+    "technical-analysis",
+    "openclaw"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naimkatiman/tradeclaw-agent.git"
+  },
+  "homepage": "https://github.com/naimkatiman/tradeclaw-agent#readme",
+  "bugs": {
+    "url": "https://github.com/naimkatiman/tradeclaw-agent/issues"
+  },
+  "author": "naimkatiman",
   "dependencies": {
     "node-fetch": "^3.3.2",
     "commander": "^12.0.0",
