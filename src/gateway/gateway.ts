@@ -1,6 +1,7 @@
 import { loadConfig } from './config.js';
 import { Scheduler } from './scheduler.js';
-import { runScan } from '../signals/engine.js';
+import { runScanAsync } from '../signals/engine.js';
+import { fetchLivePrices } from '../signals/prices.js';
 import { createChannel, type BaseChannel } from '../channels/base.js';
 import { SkillLoader } from '../skills/loader.js';
 import { join } from 'node:path';
@@ -40,6 +41,14 @@ export class Gateway {
     console.log(`[gateway] Loaded config: ${this.config.symbols.length} symbols, ${this.config.timeframes.length} timeframes`);
     console.log(`[gateway] Min confidence: ${this.config.minConfidence}%`);
     console.log(`[gateway] Scan interval: ${this.config.scanInterval}s`);
+
+    // Fetch live prices on startup to warm cache
+    try {
+      const prices = await fetchLivePrices();
+      console.log(`[gateway] Live prices loaded: ${prices.size} symbols`);
+    } catch {
+      console.warn('[gateway] Live prices unavailable — using fallback prices');
+    }
 
     // Initialize channels
     await this.initChannels();
@@ -172,8 +181,8 @@ export class Gateway {
     const timestamp = new Date().toISOString();
     console.log(`\n[scan] Starting scan at ${timestamp}`);
 
-    // Generate signals from the engine
-    const signals = runScan(
+    // Generate signals from the engine using live prices
+    const signals = await runScanAsync(
       this.config.symbols,
       this.config.timeframes,
       this.config.minConfidence

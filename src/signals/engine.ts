@@ -8,6 +8,7 @@ import {
   findResistanceLevels,
 } from './indicators.js';
 import { getSymbolConfig, SYMBOLS } from './symbols.js';
+import { fetchLivePrices } from './prices.js';
 import type {
   TradingSignal,
   IndicatorSummary,
@@ -45,10 +46,12 @@ function hashString(str: string): number {
 /**
  * Generate a deterministic price series for a symbol.
  * Uses hourly seed so signals are consistent within an hour.
+ * Anchored to the live base price so series reflects real market levels.
  */
 function generatePriceSeries(
   symbol: SymbolConfig,
   timeframe: Timeframe,
+  liveBasePrice: number,
   count: number = 100
 ): { open: number[]; high: number[]; low: number[]; close: number[] } {
   // Hourly seed: same symbol + same hour = same prices
@@ -62,13 +65,23 @@ function generatePriceSeries(
   const low: number[] = [];
   const close: number[] = [];
 
-  let price = symbol.basePrice;
+  // Start the series from a point that will converge to the live price
+  let price = liveBasePrice * (1 - symbol.volatility * 2 + rng() * symbol.volatility * 4);
 
   for (let i = 0; i < count; i++) {
     const change = (rng() - 0.5) * 2 * symbol.volatility * price;
+
+    // On the last bar, nudge close toward the live price
+    const isLast = i === count - 1;
     const o = price;
-    const c = price + change;
-    const spread = Math.abs(change) * (0.5 + rng());
+    let c: number;
+    if (isLast) {
+      c = liveBasePrice;
+    } else {
+      c = price + change;
+    }
+
+    const spread = Math.abs(c - o) * (0.5 + rng());
     const h = Math.max(o, c) + spread * rng();
     const l = Math.min(o, c) - spread * rng();
 
@@ -223,6 +236,70 @@ function generateSignalId(symbol: string, timeframe: Timeframe): string {
 
 /**
  * Generate trading signals for a symbol across given timeframes.
+ * Uses live prices when available (async version).
+ */
+export async function generateSignalsAsync(
+  symbolName: string,
+  timeframes: Timeframe[],
+  livePrices: Map<string, number>,
+  skillName?: string
+): Promise<TradingSignal[]> {
+  const symbol = getSymbolConfig(symbolName);
+  if (!symbol) return [];
+
+  const signals: TradingSignal[] = [];
+  const livePrice = livePrices.get(symbolName) ?? symbol.basePrice;
+
+  for (const timeframe of timeframes) {
+    const prices = generatePriceSeries(symbol, timeframe, livePrice);
+    const indicators = computeIndicators(prices, symbol);
+    const evaluation = evaluateSignal(indicators);
+
+    if (!evaluation) continue;
+
+    const currentPrice = prices.close[prices.close.length - 1];
+    const volatilityPoints = currentPrice * symbol.volatility;
+
+    let stopLoss: number;
+    let tp1: number;
+    let tp2: number;
+    let tp3: number;
+
+    if (evaluation.direction === 'BUY') {
+      stopLoss = roundPrice(currentPrice - volatilityPoints * 1.5, symbol);
+      tp1 = roundPrice(currentPrice + volatilityPoints * 1.0, symbol);
+      tp2 = roundPrice(currentPrice + volatilityPoints * 2.0, symbol);
+      tp3 = roundPrice(currentPrice + volatilityPoints * 3.5, symbol);
+    } else {
+      stopLoss = roundPrice(currentPrice + volatilityPoints * 1.5, symbol);
+      tp1 = roundPrice(currentPrice - volatilityPoints * 1.0, symbol);
+      tp2 = roundPrice(currentPrice - volatilityPoints * 2.0, symbol);
+      tp3 = roundPrice(currentPrice - volatilityPoints * 3.5, symbol);
+    }
+
+    signals.push({
+      id: generateSignalId(symbolName, timeframe),
+      symbol: symbolName,
+      direction: evaluation.direction,
+      confidence: evaluation.confidence,
+      entry: currentPrice,
+      stopLoss,
+      takeProfit1: tp1,
+      takeProfit2: tp2,
+      takeProfit3: tp3,
+      indicators,
+      timeframe,
+      timestamp: new Date().toISOString(),
+      status: 'active',
+      skill: skillName,
+    });
+  }
+
+  return signals;
+}
+
+/**
+ * Synchronous version (backwards compatible) — uses fallback/static prices.
  */
 export function generateSignals(
   symbolName: string,
@@ -235,14 +312,14 @@ export function generateSignals(
   const signals: TradingSignal[] = [];
 
   for (const timeframe of timeframes) {
-    const prices = generatePriceSeries(symbol, timeframe);
+    const prices = generatePriceSeries(symbol, timeframe, symbol.basePrice);
     const indicators = computeIndicators(prices, symbol);
     const evaluation = evaluateSignal(indicators);
 
     if (!evaluation) continue;
 
     const currentPrice = prices.close[prices.close.length - 1];
-    const volatilityPoints = symbol.basePrice * symbol.volatility;
+    const volatilityPoints = currentPrice * symbol.volatility;
 
     let stopLoss: number;
     let tp1: number;
@@ -284,6 +361,36 @@ export function generateSignals(
 
 /**
  * Run a full scan across all configured symbols and timeframes.
+ * Now fetches live prices from free APIs first, then generates signals.
+ */
+export async function runScanAsync(
+  symbols: string[],
+  timeframes: Timeframe[],
+  minConfidence: number = 70,
+  skillName?: string
+): Promise<TradingSignal[]> {
+  // Fetch live prices (cached 30s, graceful fallback)
+  const livePrices = await fetchLivePrices();
+
+  const allSignals: TradingSignal[] = [];
+
+  for (const symbol of symbols) {
+    const signals = await generateSignalsAsync(symbol, timeframes, livePrices, skillName);
+    for (const signal of signals) {
+      if (signal.confidence >= minConfidence) {
+        allSignals.push(signal);
+      }
+    }
+  }
+
+  // Sort by confidence descending
+  allSignals.sort((a, b) => b.confidence - a.confidence);
+
+  return allSignals;
+}
+
+/**
+ * Synchronous runScan (backwards compatible).
  */
 export function runScan(
   symbols: string[],

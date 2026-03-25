@@ -4,7 +4,11 @@ import { Command } from 'commander';
 import { Gateway } from '../gateway/gateway.js';
 import { loadConfig } from '../gateway/config.js';
 import { runOnboarding } from './onboard.js';
-import { formatNumber } from '../channels/base.js';
+import { formatNumber, createChannel } from '../channels/base.js';
+import { WebhookServer } from '../gateway/webhook-server.js';
+import { fetchLivePrices } from '../signals/prices.js';
+import { trackSignals } from '../signals/tracker.js';
+import { getHistory } from '../signals/tracker.js';
 
 const program = new Command();
 
@@ -27,6 +31,12 @@ program
   .description('Run a single scan and exit')
   .option('-c, --config <path>', 'Path to config file')
   .action(async (options) => {
+    // Show live price status
+    console.log('\n⏳ Fetching live prices...');
+    const prices = await fetchLivePrices();
+    console.log(`✅ Live prices loaded for ${prices.size} symbols`);
+    printLivePrices(prices);
+
     const gateway = new Gateway();
     const signals = await gateway.scanOnce(options.config);
 
@@ -35,6 +45,10 @@ program
     } else {
       console.log(`\n📊 ${signals.length} signal(s) generated:\n`);
       printSignalsTable(signals);
+
+      // Track signals
+      await trackSignals(signals);
+      console.log(`  💾 ${signals.length} signal(s) saved to history\n`);
     }
 
     process.exit(0);
@@ -65,6 +79,11 @@ program
   .option('-c, --config <path>', 'Path to config file')
   .option('-a, --all', 'Show all signals regardless of confidence')
   .action(async (options) => {
+    // Fetch live prices first
+    console.log('\n⏳ Fetching live prices...');
+    const prices = await fetchLivePrices();
+    console.log(`✅ Live prices loaded for ${prices.size} symbols`);
+
     const gateway = new Gateway();
     const config = await loadConfig(options.config);
 
@@ -79,8 +98,101 @@ program
     } else {
       console.log('');
       printSignalsTable(signals);
+
+      // Track signals
+      await trackSignals(signals);
     }
 
+    // Show historical accuracy summary
+    const history = await getHistory();
+    if (history.totalSignals > 0) {
+      console.log('  📈 Historical accuracy');
+      console.log(`     Total tracked: ${history.totalSignals} signals`);
+      if (history.closedSignals > 0) {
+        console.log(`     Win rate:      ${history.winRate}% (${history.closedSignals} closed)`);
+      }
+      if (history.bestSymbol) {
+        console.log(`     Most active:   ${history.bestSymbol} (${history.symbolBreakdown[history.bestSymbol].total} signals)`);
+      }
+      console.log('');
+    }
+
+    process.exit(0);
+  });
+
+program
+  .command('history')
+  .description('Show signal history and accuracy stats')
+  .option('-n, --limit <number>', 'Number of recent signals to show', '10')
+  .action(async (options) => {
+    const history = await getHistory();
+    const limit = parseInt(options.limit, 10) || 10;
+
+    console.log('');
+    console.log('  ╔═══════════════════════════════════════╗');
+    console.log('  ║       Signal History & Accuracy       ║');
+    console.log('  ╚═══════════════════════════════════════╝');
+    console.log('');
+
+    if (history.totalSignals === 0) {
+      console.log('  No signals tracked yet. Run a scan first:');
+      console.log('    tradeclaw-agent scan');
+      console.log('');
+      process.exit(0);
+    }
+
+    // Overall stats
+    console.log('  📊 Overall Stats');
+    console.log('  ────────────────');
+    console.log(`  Total signals:    ${history.totalSignals}`);
+    console.log(`  Closed signals:   ${history.closedSignals}`);
+    console.log(`  Win rate:         ${history.closedSignals > 0 ? history.winRate + '%' : 'N/A (no closed signals yet)'}`);
+    console.log(`  Best symbol:      ${history.bestSymbol ?? 'N/A'}`);
+    console.log(`  Best skill:       ${history.bestSkill ?? 'N/A'}`);
+    console.log('');
+
+    // Symbol breakdown
+    console.log('  📈 Per Symbol');
+    console.log('  ─────────────');
+    for (const [sym, data] of Object.entries(history.symbolBreakdown)) {
+      const bar = '█'.repeat(Math.min(Math.round(data.total / 2), 20));
+      console.log(`  ${pad(sym, 8)} ${pad(String(data.total), 4)} signals  ${bar}`);
+    }
+    console.log('');
+
+    // Skill breakdown
+    console.log('  🧠 Per Skill');
+    console.log('  ────────────');
+    for (const [sk, data] of Object.entries(history.skillBreakdown)) {
+      console.log(`  ${pad(sk, 16)} ${data.total} signals`);
+    }
+    console.log('');
+
+    // Recent signals
+    const recentSlice = history.recentSignals.slice(0, limit);
+    if (recentSlice.length > 0) {
+      console.log(`  🕐 Last ${recentSlice.length} signals`);
+      console.log('  ─────────────────');
+      for (const sig of recentSlice) {
+        const dir = sig.direction === 'BUY' ? '🟢 BUY ' : '🔴 SELL';
+        const time = new Date(sig.timestamp).toLocaleString();
+        const resultTag = sig.result ? ` [${sig.result}]` : '';
+        console.log(`  ${dir} ${pad(sig.symbol, 8)} ${sig.confidence}%  entry=${formatNumber(sig.entry)}  ${time}${resultTag}`);
+      }
+      console.log('');
+    }
+
+    process.exit(0);
+  });
+
+program
+  .command('prices')
+  .description('Show current live prices from all sources')
+  .action(async () => {
+    console.log('\n⏳ Fetching live prices...');
+    const prices = await fetchLivePrices();
+    console.log(`✅ Loaded ${prices.size} symbols\n`);
+    printLivePrices(prices);
     process.exit(0);
   });
 
@@ -108,21 +220,63 @@ program
     await runOnboarding();
   });
 
+program
+  .command('server')
+  .description('Start TradingView webhook receiver — bridge TV alerts to Telegram/Discord')
+  .option('-p, --port <port>', 'Port to listen on', '8080')
+  .option('-c, --config <path>', 'Path to config file')
+  .option('-s, --secret <secret>', 'Webhook secret for authentication')
+  .action(async (options) => {
+    const config = await loadConfig(options.config);
+    const channels = config.channels
+      .filter((c: { enabled: boolean }) => c.enabled)
+      .map(createChannel)
+      .filter(Boolean);
+
+    const port = parseInt(options.port, 10);
+    const server = new WebhookServer(channels as any, port, options.secret);
+
+    console.log('');
+    console.log('  🦞 tradeclaw-agent webhook server');
+    console.log('');
+    console.log(`  Listening on http://0.0.0.0:${port}`);
+    console.log(`  TradingView URL → http://YOUR_IP:${port}/webhook`);
+    console.log('');
+    console.log('  TradingView alert JSON:');
+    console.log('    {"symbol":"{{ticker}}","action":"{{strategy.order.action}}","price":{{close}},"timeframe":"{{interval}}"}');
+    console.log('');
+
+    await server.start();
+
+    process.on('SIGTERM', async () => { await server.stop(); process.exit(0); });
+    process.on('SIGINT', async () => { await server.stop(); process.exit(0); });
+  });
+
 // Parse and run
 program.parse();
 
 // --- Helpers ---
 
-interface SignalRow {
-  symbol: string;
-  direction: string;
-  confidence: number;
-  entry: number;
-  stopLoss: number;
-  takeProfit1: number;
-  timeframe: string;
-  rsi: number;
-  macd: string;
+function printLivePrices(prices: Map<string, number>): void {
+  const categories: Record<string, string[]> = {
+    '🪙 Metals': ['XAUUSD', 'XAGUSD'],
+    '₿ Crypto': ['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD'],
+    '💱 Forex': ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD'],
+  };
+
+  for (const [cat, symbols] of Object.entries(categories)) {
+    const items: string[] = [];
+    for (const sym of symbols) {
+      const price = prices.get(sym);
+      if (price !== undefined) {
+        items.push(`${sym}=${formatNumber(price)}`);
+      }
+    }
+    if (items.length > 0) {
+      console.log(`  ${cat}  ${items.join('  ')}`);
+    }
+  }
+  console.log('');
 }
 
 function printSignalsTable(signals: { symbol: string; direction: string; confidence: number; entry: number; stopLoss: number; takeProfit1: number; timeframe: string; indicators: { rsi: { value: number }; macd: { signal: string } } }[]): void {

@@ -55,6 +55,30 @@ That's it. Signals start flowing.
 
 ---
 
+## 📡 TradingView Integration
+
+Already using TradingView? Bridge your alerts directly to Telegram or Discord — no SaaS, no middleman.
+
+```bash
+# Start the webhook receiver
+tradeclaw-agent server --port 8080
+```
+
+Then set your TradingView alert webhook URL to `http://YOUR_IP:8080/webhook` with this message body:
+
+```json
+{
+  "symbol": "{{ticker}}",
+  "action": "{{strategy.order.action}}",
+  "price": {{close}},
+  "timeframe": "{{interval}}"
+}
+```
+
+Your Telegram/Discord receives a formatted signal instantly when TradingView fires. [Full setup guide →](docs/tradingview-setup.md)
+
+---
+
 ## Why This Exists
 
 | | Paid Signal Services | tradeclaw-agent |
@@ -263,8 +287,26 @@ MIT
 
 ---
 
+## 🗺️ Roadmap
+
+| Version | Features |
+|---------|----------|
+| **v0.1.0** ✅ | Signal engine, Telegram/Discord/Webhook, CLI, Skills |
+| **v0.2.0** 🔄 | Live prices, accuracy tracking, OpenClaw skill |
+| **v0.3.0** 📋 | TradingView webhook bridge |
+| **v0.4.0** 📋 | Multi-exchange price feeds (Binance, Kraken, Bybit) |
+| **v1.0.0** 📋 | Docker image, PM2 integration, full test suite |
+
+---
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=naimkatiman/tradeclaw-agent&type=Date)](https://star-history.com/#naimkatiman/tradeclaw-agent&Date)
+
+---
+
 <p align="center">
   <b>If this saves you from paying for signal services, give it a ⭐</b>
   <br>
-  <a href="https://github.com/your-org/tradeclaw-agent">github.com/your-org/tradeclaw-agent</a>
+  <a href="https://github.com/naimkatiman/tradeclaw-agent">github.com/naimkatiman/tradeclaw-agent</a>
 </p>
