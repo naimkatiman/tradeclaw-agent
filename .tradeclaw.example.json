@@ -1,0 +1,25 @@
+{
+  "scanInterval": 60,
+  "minConfidence": 70,
+  "symbols": ["XAUUSD", "XAGUSD", "BTCUSD", "ETHUSD", "EURUSD", "GBPUSD"],
+  "timeframes": ["H1", "H4", "D1"],
+  "channels": [
+    {
+      "type": "telegram",
+      "enabled": true,
+      "telegramBotToken": "YOUR_BOT_TOKEN",
+      "telegramChatId": "YOUR_CHAT_ID"
+    },
+    {
+      "type": "discord",
+      "enabled": false,
+      "discordWebhookUrl": "YOUR_DISCORD_WEBHOOK_URL"
+    },
+    {
+      "type": "webhook",
+      "enabled": false,
+      "webhookUrl": "https://your-server.com/signals"
+    }
+  ],
+  "skills": ["rsi-divergence", "macd-crossover"]
+}

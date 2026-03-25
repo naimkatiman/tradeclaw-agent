@@ -1,0 +1,30 @@
+{
+  "name": "tradeclaw-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Self-hosted AI trading signal agent. Runs on your machine. Delivers signals to Telegram, Discord, or any webhook. Free forever.",
+  "bin": {
+    "tradeclaw-agent": "./dist/cli/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "keywords": ["trading", "signals", "forex", "crypto", "telegram", "self-hosted", "ai", "open-source"],
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "tsx": "^4.7.2",
+    "@types/node": "^20.12.0"
+  }
+}
