@@ -35,23 +35,28 @@ export class TelegramChannel implements BaseChannel {
   }
 
   private formatSignal(signal: TradingSignal): string {
-    const dirEmoji = signal.direction === 'BUY' ? '🟢' : '🔴';
+    const diamond = signal.direction === 'BUY' ? '◆' : '◇';
     const skillName = signal.skill || 'Multi-Indicator';
 
+    const esc = (s: string) => s.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+    const fmt = (n: number) => esc(formatNumber(n));
+    const diff = (a: number, b: number) => esc(formatDiff(a, b));
+
     const lines = [
-      `${dirEmoji} *${signal.direction} ${signal.symbol}*  \\[${signal.confidence}%\\]`,
-      `───────────────────`,
-      `Entry:  ${formatNumber(signal.entry)}`,
-      `SL:     ${formatNumber(signal.stopLoss)}  (${formatDiff(signal.entry, signal.stopLoss)})`,
-      `TP1:    ${formatNumber(signal.takeProfit1)}  (${formatDiff(signal.entry, signal.takeProfit1)})`,
-      `TP2:    ${formatNumber(signal.takeProfit2)}  (${formatDiff(signal.entry, signal.takeProfit2)})`,
-      `TP3:    ${formatNumber(signal.takeProfit3)}  (${formatDiff(signal.entry, signal.takeProfit3)})`,
+      `*${diamond} ${signal.direction} ${signal.symbol}*  \\[${signal.confidence}%\\]`,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `▸ Entry    ${fmt(signal.entry)}`,
+      `▸ SL       ${fmt(signal.stopLoss)}   ${diff(signal.entry, signal.stopLoss)}`,
+      `▸ TP1      ${fmt(signal.takeProfit1)}   ${diff(signal.entry, signal.takeProfit1)}`,
+      `▸ TP2      ${fmt(signal.takeProfit2)}   ${diff(signal.entry, signal.takeProfit2)}`,
+      `▸ TP3      ${fmt(signal.takeProfit3)}   ${diff(signal.entry, signal.takeProfit3)}`,
       ``,
-      `📊 RSI: ${signal.indicators.rsi.value} (${capitalize(signal.indicators.rsi.signal)})`,
-      `📈 MACD: ${capitalize(signal.indicators.macd.signal)}`,
-      `〰️ EMA: ${emaTrendText(signal.indicators.ema.trend)}`,
-      `⏱ Timeframe: ${signal.timeframe}`,
-      `🎯 Skill: ${skillName}`,
+      `◈ RSI: ${signal.indicators.rsi.value}  ${capitalize(signal.indicators.rsi.signal)}`,
+      `◈ MACD: ${capitalize(signal.indicators.macd.signal)}`,
+      `◈ EMA: ${emaTrendText(signal.indicators.ema.trend)}`,
+      `◉ ${signal.timeframe}  \\|  ${esc(skillName)}`,
+      `─────────────────────`,
+      `⊕ tradeclaw\\.win`,
     ];
 
     return lines.join('\n');
