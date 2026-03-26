@@ -11,7 +11,8 @@
     }
   },
   "bin": {
-    "tradeclaw-agent": "./dist/cli/cli.js"
+    "tradeclaw-agent": "./dist/cli/cli.js",
+    "tradeclaw-server": "./dist/server/server.js"
   },
   "files": [
     "dist",
@@ -27,6 +28,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src/",
+    "server": "node dist/server/server.js",
+    "dev:server": "tsx watch src/server/server.ts",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
   "keywords": [
