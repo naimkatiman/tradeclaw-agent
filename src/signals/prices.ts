@@ -25,15 +25,15 @@ const COINGECKO_MAP: Record<string, string> = {
 /** Fallback prices — used when all APIs are unreachable. Never crash. */
 const FALLBACK_PRICES: Record<string, number> = {
   XAUUSD: 3020.0,
-  XAGUSD: 33.5,
-  BTCUSD: 87000.0,
-  ETHUSD: 2050.0,
-  XRPUSD: 2.45,
-  SOLUSD: 140.0,
-  EURUSD: 1.0790,
-  GBPUSD: 1.2920,
-  USDJPY: 150.30,
-  AUDUSD: 0.6290,
+  XAGUSD: 33.50,
+  BTCUSD: 70944.0,
+  ETHUSD: 2154.94,
+  XRPUSD: 1.41,
+  SOLUSD: 91.37,
+  EURUSD: 1.1576,
+  GBPUSD: 1.3378,
+  USDJPY: 159.205,
+  AUDUSD: 0.6951,
 };
 
 /**
