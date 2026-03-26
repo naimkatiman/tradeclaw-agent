@@ -24,16 +24,16 @@ const COINGECKO_MAP: Record<string, string> = {
 
 /** Fallback prices — used when all APIs are unreachable. Never crash. */
 const FALLBACK_PRICES: Record<string, number> = {
-  XAUUSD: 3020.0,
-  XAGUSD: 33.50,
-  BTCUSD: 70944.0,
-  ETHUSD: 2154.94,
-  XRPUSD: 1.41,
+  XAUUSD: 4505.0,
+  XAGUSD: 71.36,
+  BTCUSD: 70798.0,
+  ETHUSD: 2147.53,
+  XRPUSD: 1.40,
   SOLUSD: 91.37,
-  EURUSD: 1.1576,
-  GBPUSD: 1.3378,
-  USDJPY: 159.205,
-  AUDUSD: 0.6951,
+  EURUSD: 1.1559,
+  GBPUSD: 1.3352,
+  USDJPY: 159.53,
+  AUDUSD: 0.6939,
 };
 
 /**
@@ -66,24 +66,48 @@ async function fetchCryptoPrices(prices: Map<string, number>): Promise<void> {
   }
 }
 
-async function fetchGoldPrice(prices: Map<string, number>): Promise<void> {
-  const res = await fetchWithTimeout('https://api.metals.live/v1/spot/gold');
-  if (!res.ok) return;
-
-  const data = (await res.json()) as Array<{ price?: number }>;
-  if (Array.isArray(data) && data.length > 0 && typeof data[0].price === 'number') {
-    prices.set('XAUUSD', data[0].price);
+async function fetchStooqPrice(symbol: string): Promise<number | null> {
+  try {
+    const res = await fetchWithTimeout(`https://stooq.com/q/l/?s=${symbol.toLowerCase()}&f=c&h&e=csv`);
+    if (!res.ok) return null;
+    const text = await res.text();
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return null;
+    const val = parseFloat(lines[1].trim());
+    return isNaN(val) || val <= 0 ? null : val;
+  } catch {
+    return null;
   }
 }
 
-async function fetchSilverPrice(prices: Map<string, number>): Promise<void> {
-  const res = await fetchWithTimeout('https://api.metals.live/v1/spot/silver');
-  if (!res.ok) return;
+async function fetchGoldPrice(prices: Map<string, number>): Promise<void> {
+  // Try stooq (reliable, no SSL issues)
+  const stooqPrice = await fetchStooqPrice('XAUUSD');
+  if (stooqPrice) { prices.set('XAUUSD', stooqPrice); return; }
+  // Fallback: metals.live
+  try {
+    const res = await fetchWithTimeout('https://api.metals.live/v1/spot/gold');
+    if (!res.ok) return;
+    const data = (await res.json()) as Array<{ price?: number }>;
+    if (Array.isArray(data) && data.length > 0 && typeof data[0].price === 'number') {
+      prices.set('XAUUSD', data[0].price);
+    }
+  } catch { /* use fallback */ }
+}
 
-  const data = (await res.json()) as Array<{ price?: number }>;
-  if (Array.isArray(data) && data.length > 0 && typeof data[0].price === 'number') {
-    prices.set('XAGUSD', data[0].price);
-  }
+async function fetchSilverPrice(prices: Map<string, number>): Promise<void> {
+  // Try stooq first
+  const stooqPrice = await fetchStooqPrice('XAGUSD');
+  if (stooqPrice) { prices.set('XAGUSD', stooqPrice); return; }
+  // Fallback: metals.live
+  try {
+    const res = await fetchWithTimeout('https://api.metals.live/v1/spot/silver');
+    if (!res.ok) return;
+    const data = (await res.json()) as Array<{ price?: number }>;
+    if (Array.isArray(data) && data.length > 0 && typeof data[0].price === 'number') {
+      prices.set('XAGUSD', data[0].price);
+    }
+  } catch { /* use fallback */ }
 }
 
 async function fetchForexPrices(prices: Map<string, number>): Promise<void> {
