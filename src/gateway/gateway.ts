@@ -31,7 +31,7 @@ export class Gateway {
   async start(configPath?: string): Promise<void> {
     console.log('');
     console.log('  ╔═══════════════════════════════════════╗');
-    console.log('  ║       tradeclaw-agent v0.1.0          ║');
+    console.log('  ║       tradeclaw-agent v0.2.0          ║');
     console.log('  ║   Self-hosted trading signal agent    ║');
     console.log('  ╚═══════════════════════════════════════╝');
     console.log('');

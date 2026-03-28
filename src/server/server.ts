@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // src/server/server.ts
 import { createServer } from 'node:http';
 import { Gateway } from '../gateway/gateway.js';

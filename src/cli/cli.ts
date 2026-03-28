@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name('tradeclaw-agent')
   .description('Self-hosted AI trading signal agent')
-  .version('0.1.0');
+  .version('0.2.0');
 
 program
   .command('start')

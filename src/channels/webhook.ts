@@ -47,7 +47,7 @@ export class WebhookChannel implements BaseChannel {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'tradeclaw-agent/0.1.0',
+          'User-Agent': 'tradeclaw-agent/0.2.0',
         },
         body: JSON.stringify(payload),
       });
