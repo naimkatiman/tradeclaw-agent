@@ -17,7 +17,7 @@ export {
   calculateStochastic,
 } from './signals/indicators.js';
 export { SYMBOLS, getSymbolConfig, getAllSymbols, updateBasePrice } from './signals/symbols.js';
-export { fetchLivePrices, getLivePrice, invalidatePriceCache } from './signals/prices.js';
+export { fetchLivePrices, getLivePrice, getCachedPrices, getCachedPrice, invalidatePriceCache } from './signals/prices.js';
 export { trackSignal, trackSignals, loadHistory, getHistory } from './signals/tracker.js';
 export { SkillLoader } from './skills/loader.js';
 export { createChannel } from './channels/base.js';

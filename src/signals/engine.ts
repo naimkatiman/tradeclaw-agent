@@ -8,7 +8,7 @@ import {
   findResistanceLevels,
 } from './indicators.js';
 import { getSymbolConfig, SYMBOLS } from './symbols.js';
-import { fetchLivePrices } from './prices.js';
+import { fetchLivePrices, getCachedPrice } from './prices.js';
 import type {
   TradingSignal,
   IndicatorSummary,
@@ -299,7 +299,10 @@ export async function generateSignalsAsync(
 }
 
 /**
- * Synchronous version (backwards compatible) — uses fallback/static prices.
+ * Synchronous version (backwards compatible).
+ * Uses cached live prices if available, otherwise falls back to symbol.basePrice.
+ * This is the path skills use — they call this sync function and still get
+ * live prices because the cache is populated by fetchLivePrices() earlier in the scan.
  */
 export function generateSignals(
   symbolName: string,
@@ -309,10 +312,13 @@ export function generateSignals(
   const symbol = getSymbolConfig(symbolName);
   if (!symbol) return [];
 
+  // Prefer cached live price, fall back to static base price
+  const livePrice = getCachedPrice(symbolName) ?? symbol.basePrice;
+
   const signals: TradingSignal[] = [];
 
   for (const timeframe of timeframes) {
-    const prices = generatePriceSeries(symbol, timeframe, symbol.basePrice);
+    const prices = generatePriceSeries(symbol, timeframe, livePrice);
     const indicators = computeIndicators(prices, symbol);
     const evaluation = evaluateSignal(indicators);
 

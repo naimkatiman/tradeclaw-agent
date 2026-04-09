@@ -4,7 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://typescriptlang.org)
-[![npm](https://img.shields.io/badge/npx-tradeclaw--agent-CB3837?logo=npm)](https://npmjs.com/package/tradeclaw-agent)
+
+[![npm version](https://img.shields.io/npm/v/tradeclaw-agent.svg)](https://npmjs.com/package/tradeclaw-agent)
+[![npm downloads](https://img.shields.io/npm/dm/tradeclaw-agent.svg)](https://npmjs.com/package/tradeclaw-agent)
+[![CI](https://github.com/naimkatiman/tradeclaw-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/naimkatiman/tradeclaw-agent/actions/workflows/ci.yml)
 
 > **Prefer a web dashboard?** → [TradeClaw](https://github.com/naimkatiman/tradeclaw) — the Docker-deployable web version with live charts.
 
@@ -191,12 +194,74 @@ Add `"my-strategy"` to your config's `skills` array. Done.
 
 ```bash
 tradeclaw-agent start          # Start the daemon
-tradeclaw-agent scan           # Run one scan, print results, exit
+tradeclaw-agent scan           # Run one scan with live prices, print results
 tradeclaw-agent status         # Show current configuration
-tradeclaw-agent signals        # Run scan and display signals table
+tradeclaw-agent signals        # Run scan + display signals table + accuracy
+tradeclaw-agent history        # Show signal history and win rate
+tradeclaw-agent prices         # Show current live prices from all sources
 tradeclaw-agent test-channel   # Send test message to all channels
 tradeclaw-agent onboard        # Interactive setup wizard
 ```
+
+---
+
+## Live Price Feeds
+
+tradeclaw-agent fetches **real-time prices from free public APIs** on every scan:
+
+| Market | API | Symbols |
+|--------|-----|---------|
+| Crypto | [CoinGecko](https://www.coingecko.com/api) | BTC, ETH, SOL, XRP |
+| Metals | [stooq](https://stooq.com) + [metals.live](https://metals.live) | XAUUSD (Gold), XAGUSD (Silver) |
+| Forex  | [ExchangeRate API](https://open.er-api.com) | EUR/USD, GBP/USD, USD/JPY, AUD/USD |
+
+Prices are cached for 30 seconds to respect rate limits. If any API is unreachable, the engine **gracefully falls back to seeded prices** — scans never crash.
+
+```bash
+$ tradeclaw-agent prices
+✅ Loaded 10 symbols
+
+  🪙 Metals  XAUUSD=4,711.90  XAGUSD=73.8810
+  ₿ Crypto  BTCUSD=70,949.00  ETHUSD=2,178.07  SOLUSD=82.10  XRPUSD=1.3300
+  💱 Forex   EURUSD=1.1677  GBPUSD=1.3416  USDJPY=158.5290  AUDUSD=0.70452
+```
+
+---
+
+## Signal Accuracy Tracking
+
+Every generated signal is persisted to `~/.tradeclaw/signal-history.jsonl` (one JSON per line). Query your historical accuracy at any time:
+
+```bash
+$ tradeclaw-agent history
+
+  📊 Overall Stats
+  Total signals:    142
+  Win rate:         68%
+  Best symbol:      XAUUSD
+  Best skill:       rsi-divergence
+```
+
+Each record includes: `id`, `symbol`, `direction`, `confidence`, `entry`, `tp1/tp2/tp3`, `sl`, `timestamp`, `skill`, plus optional `closed_at`, `result`, `pnl_pips` for closed trades.
+
+---
+
+## Use as an OpenClaw Skill
+
+If you use [OpenClaw](https://github.com/openclaw/openclaw), install tradeclaw-agent as a skill:
+
+```bash
+clawhub install tradeclaw-agent
+```
+
+Then ask your agent:
+
+- "scan signals" → full market scan with live prices
+- "show me XAUUSD signals" → signals for a specific symbol
+- "show prices" → current live prices from all sources
+- "signal history" → historical accuracy stats
+
+See [`openclaw-skill/README.md`](./openclaw-skill/README.md) for details.
 
 ---
 
@@ -310,3 +375,9 @@ MIT
   <br>
   <a href="https://github.com/naimkatiman/tradeclaw-agent">github.com/naimkatiman/tradeclaw-agent</a>
 </p>
+
+---
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=naimkatiman/tradeclaw-agent&type=Date)](https://star-history.com/#naimkatiman/tradeclaw-agent&Date)

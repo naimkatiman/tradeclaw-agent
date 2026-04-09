@@ -169,6 +169,24 @@ export async function getLivePrice(symbol: string): Promise<number | undefined> 
 }
 
 /**
+ * Synchronously return the cached price map.
+ * Returns an empty Map if nothing has been fetched yet.
+ * Used by the sync signal engine path to share live prices with skills.
+ */
+export function getCachedPrices(): Map<string, number> {
+  if (!cache) return new Map();
+  return new Map(cache.prices);
+}
+
+/**
+ * Synchronously return a single cached price (or undefined if not fetched).
+ */
+export function getCachedPrice(symbol: string): number | undefined {
+  if (!cache) return undefined;
+  return cache.prices.get(symbol.toUpperCase());
+}
+
+/**
  * Force-clear the cache (useful for testing).
  */
 export function invalidatePriceCache(): void {
